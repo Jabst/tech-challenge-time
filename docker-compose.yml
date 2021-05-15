@@ -1,0 +1,32 @@
+version: "3.5"
+
+services:
+
+  psql:
+    build:
+      context: .
+      dockerfile: assets/docker/psql.dev.dockerfile
+    restart: always
+    hostname: psql
+    network_mode: bridge
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - 5434:5432
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /src/dist/api users
+    network_mode: bridge
+    ports:
+      - 80:8080
+    environment:
+      - env=docker
+    links:
+      - psql
+    depends_on:
+      - psql
