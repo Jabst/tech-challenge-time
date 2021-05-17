@@ -13,9 +13,7 @@ class TrackerList extends React.Component {
   
       let trackerRows;
   
-      if (this.props.trackers.length === 0) {
-  
-      } else {
+      if (this.props.trackers.length !== 0) {
         trackerRows = this.props.trackers.map( elem => (
           <TrackerRow key={elem.id} tracker={elem} refresh={this.props.refresh} />
         ));

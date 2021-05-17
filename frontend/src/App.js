@@ -21,6 +21,7 @@ class App extends React.Component {
     
     this.refresh = this.refresh.bind(this);
     this.filterHandler = this.filterHandler.bind(this);
+    this.trackersLabel = this.trackersLabel.bind(this);
     
   }
   
@@ -58,12 +59,29 @@ class App extends React.Component {
       this.refresh();
     });
   }
+
+  trackersLabel() {
+    switch (this.state.timeFilter) {
+      case 'all':
+        return (
+          <h2>All trackers</h2>
+        )
+      default:
+        return(
+          <h2>Trackers listed by {this.state.timeFilter}</h2>
+        )
+    }
+  }
   
   render() {
     return (
       <Container>
+        <h1>Trackers</h1>
+        <h2>Filter by</h2>
         <Filter handler={this.filterHandler}></Filter>
+        <h2>Create tracker</h2>
         <NewTracker refresh={this.refresh} ></NewTracker>
+        {this.trackersLabel()}
         <TrackerList refresh={this.refresh} trackers={this.state.trackers}></TrackerList>
       </Container>
         

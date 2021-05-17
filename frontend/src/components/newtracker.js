@@ -35,12 +35,12 @@ class NewTracker extends React.Component {
 
     render() {
         return (
-            <Form>
+            <Form inline>
                 <Form.Group controlId="formTrackerName">
                     <Form.Label>Tracker Name: </Form.Label>
                     <Form.Control type="text" placeholder="Enter new tracker name" ref={this.input} onChange={this.handleChange} />
-                    <Button variant="primary" onClick={this.createNewTracker} >Create Tracker</Button>
                 </Form.Group>
+                <Button variant="primary" onClick={this.createNewTracker} >Create Tracker</Button>
             </Form>
         );
     }

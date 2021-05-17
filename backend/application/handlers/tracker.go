@@ -67,6 +67,8 @@ func (h TrackerHandler) GetTracker(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Println(err)
+
+		return
 	}
 
 	Tracker, err := h.service.GetTracker(context.Background(), i)
@@ -213,6 +215,8 @@ func (h TrackerHandler) UpdateTracker(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Println(err)
+
+		return
 	}
 
 	var request updateTimeTrackerRequest

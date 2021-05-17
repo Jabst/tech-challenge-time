@@ -42,11 +42,11 @@ func SetupAPI() {
 
 	router := mux.NewRouter().StrictSlash(true)
 
-	router.HandleFunc("/tracker/{id}", handler.GetTracker).Methods("GET")
-	router.HandleFunc("/tracker", handler.ListTrackers).Methods("GET")
-	router.HandleFunc("/tracker", handler.CreateTracker).Methods("POST")
-	router.HandleFunc("/tracker/{id}", handler.UpdateTracker).Methods("PUT")
-	router.HandleFunc("/tracker/{id}", handler.DeleteTracker).Methods("DELETE")
+	router.HandleFunc("/api/v1/tracker/{id}", handler.GetTracker).Methods("GET")
+	router.HandleFunc("/api/v1/tracker", handler.ListTrackers).Methods("GET")
+	router.HandleFunc("/api/v1/tracker", handler.CreateTracker).Methods("POST")
+	router.HandleFunc("/api/v1/tracker/{id}", handler.UpdateTracker).Methods("PUT")
+	router.HandleFunc("/api/v1/tracker/{id}", handler.DeleteTracker).Methods("DELETE")
 
 	headersOk := gHandlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization"})
 	originsOk := gHandlers.AllowedOrigins([]string{"*"})
@@ -57,7 +57,7 @@ func SetupAPI() {
 }
 
 func getEnvironmentVariables() {
-	env := os.Getenv("env")
+	env := os.Getenv("ENVIRONMENT")
 
 	if env == "docker" {
 		pgsqlAddr = "psql"

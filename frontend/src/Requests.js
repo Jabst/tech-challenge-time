@@ -7,7 +7,7 @@ const headers = {
     referrerPolicy: "no-referrer"
 }
 
-const url = "http://localhost:8080"
+const url = "http://localhost:8080/api/v1"
 
 const getTrackerByID = async (id) => {
     const uri = `${url}/tracker/${id}`;
@@ -19,7 +19,7 @@ const getTrackerByID = async (id) => {
 
 const getTrackers = async (start, end) => {
     let uri = "";
-    start !== undefined && end !== undefined ? uri = `http://localhost:8080/tracker?start_date=${start}&end_date=${end}` : uri = `http://localhost:8080/tracker`;
+    start !== undefined && end !== undefined ? uri = `${url}/tracker?start_date=${start}&end_date=${end}` : uri = `${url}/tracker`;
     const requestOptions = {...headers, method: "GET"};
     
     const response = await fetch(uri, requestOptions);
