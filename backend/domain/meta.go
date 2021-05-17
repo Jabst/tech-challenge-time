@@ -40,3 +40,7 @@ func (m *Meta) HydrateMeta(deleted bool, createdAt, updatedAt time.Time, version
 	m.updatedAt = updatedAt
 	m.version = version
 }
+
+func (m *Meta) SetDeleted(deleted bool) {
+	m.deleted = deleted
+}

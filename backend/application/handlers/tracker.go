@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"pento/code-challenge/domain/tracker/models"
 	"pento/code-challenge/domain/tracker/services"
+	"pento/code-challenge/utils"
 	"strconv"
 	"time"
 
@@ -15,62 +16,60 @@ import (
 )
 
 type TrackerService interface {
-	GetUser(ctx context.Context, id int) (models.TimeTracker, error)
-	ListUsers(ctx context.Context, queryTerms map[string]string) ([]models.TimeTracker, error)
-	CreateUser(ctx context.Context, params services.CreateTrackerParams) (models.TimeTracker, error)
-	UpdateUser(ctx context.Context, params services.UpdateTrackerParams) (models.TimeTracker, error)
-	DeleteUser(ctx context.Context, params services.DeleteTrackerParams) error
+	GetTracker(ctx context.Context, id uint64) (models.TimeTracker, error)
+	ListTrackers(ctx context.Context, params services.ListTimeTracker) ([]models.TimeTracker, error)
+	CreateTracker(ctx context.Context, params services.CreateTrackerParams) (models.TimeTracker, error)
+	UpdateTracker(ctx context.Context, params services.UpdateTrackerParams) (models.TimeTracker, error)
+	DeleteTracker(ctx context.Context, params services.DeleteTrackerParams) error
 }
 
-type UserHandler struct {
+type TrackerHandler struct {
 	service TrackerService
 }
 
-func NewUserHandler(service TrackerService) *UserHandler {
-	return &UserHandler{
+func NewTrackerHandler(service TrackerService) *TrackerHandler {
+	return &TrackerHandler{
 		service: service,
 	}
 }
 
 type updateTimeTrackerRequest struct {
-	Start   time.Time `json:"start"`
 	End     time.Time `json:"end"`
 	Name    string    `json:"name"`
-	ID      uint64    `json:"id"`
 	Version uint32    `json:"version"`
 }
 
-type createUserRequest struct {
+type createTrackerRequest struct {
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
 	Name  string    `json:"name"`
 }
 
 type TimeTrackerResponse struct {
-	ID        uint64    `json:"id"`
-	Start     string    `json:"start"`
-	End       string    `json:"end"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Version   uint32    `json:"version"`
+	ID        *uint64    `json:"id"`
+	Start     *time.Time `json:"start"`
+	End       *time.Time `json:"end"`
+	Name      *string    `json:"name"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	Version   uint32     `json:"version"`
 }
 
 type TimeTrackersResponse struct {
 	Trackers []TimeTrackerResponse `json:"trackers"`
 }
 
-func (h UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+func (h TrackerHandler) GetTracker(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 
-	i, err := strconv.Atoi(id)
+	i, err := strconv.ParseUint(id, 10, 64)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Println(err)
 	}
 
-	user, err := h.service.GetUser(context.Background(), i)
+	Tracker, err := h.service.GetTracker(context.Background(), i)
 	if err != nil {
 		switch err {
 		default:
@@ -80,7 +79,7 @@ func (h UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := json.Marshal(fromDomain(user))
+	response, err := json.Marshal(fromDomain(Tracker))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -98,9 +97,65 @@ func (h UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+func (h TrackerHandler) ListTrackers(w http.ResponseWriter, r *http.Request) {
 
-	var request createUserRequest
+	var startDate, endDate time.Time
+	var err error
+
+	if r.FormValue("start_date") == "" && r.FormValue("end_date") == "" {
+		startDate = time.Time{}
+		endDate = time.Time{}
+	} else {
+		startDate, err = utils.StrToTime(r.FormValue("start_date"))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Println(err)
+
+			return
+		}
+		endDate, err = utils.StrToTime(r.FormValue("end_date"))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			log.Println(err)
+
+			return
+		}
+	}
+
+	trackers, err := h.service.ListTrackers(context.Background(), services.ListTimeTracker{
+		Start: startDate,
+		End:   endDate,
+	})
+	if err != nil {
+		switch err {
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		log.Println(err)
+		return
+	}
+
+	response, err := json.Marshal(fromDomainSlice(trackers))
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+
+		return
+	}
+
+	_, err = w.Write(response)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println(err)
+
+		return
+	}
+}
+
+func (h TrackerHandler) CreateTracker(w http.ResponseWriter, r *http.Request) {
+
+	var request createTrackerRequest
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -119,11 +174,10 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 
 	params := services.CreateTrackerParams{
 		Start: request.Start,
-		End:   request.End,
 		Name:  request.Name,
 	}
 
-	user, err := h.service.CreateUser(context.Background(), params)
+	Tracker, err := h.service.CreateTracker(context.Background(), params)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -131,7 +185,7 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := json.Marshal(fromDomain(user))
+	response, err := json.Marshal(fromDomain(Tracker))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -150,7 +204,7 @@ func (h UserHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+func (h TrackerHandler) UpdateTracker(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	paramID := vars["id"]
@@ -180,11 +234,12 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	params := services.UpdateTrackerParams{
 		Version: request.Version,
-
-		ID: id,
+		Name:    request.Name,
+		End:     request.End,
+		ID:      id,
 	}
 
-	user, err := h.service.UpdateUser(context.Background(), params)
+	tracker, err := h.service.UpdateTracker(context.Background(), params)
 	if err != nil {
 		switch err {
 		case services.ErrTrackerNotFound:
@@ -201,7 +256,7 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := json.Marshal(fromDomain(user))
+	response, err := json.Marshal(fromDomain(tracker))
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println(err)
@@ -217,7 +272,7 @@ func (h UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+func (h TrackerHandler) DeleteTracker(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 	paramsID := vars["id"]
@@ -230,7 +285,7 @@ func (h UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.DeleteUser(context.Background(), services.DeleteTrackerParams{
+	err = h.service.DeleteTracker(context.Background(), services.DeleteTrackerParams{
 		ID: id,
 	})
 	if err != nil {
@@ -244,27 +299,32 @@ func (h UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func fromDomain(tracker models.TimeTracker) TimeTrackerResponse {
+
+	var end *time.Time = nil
+
+	if !tracker.End.IsZero() {
+		end = &tracker.End
+	}
+
 	return TimeTrackerResponse{
-		ID:        tracker.ID,
-		Start:     tracker.Start.String(),
-		End:       tracker.End.String(),
-		Name:      tracker.Name,
+		ID:        &tracker.ID,
+		Start:     &tracker.Start,
+		End:       end,
+		Name:      &tracker.Name,
 		CreatedAt: tracker.Meta.GetCreatedAt(),
 		UpdatedAt: tracker.Meta.GetUpdatedAt(),
 		Version:   tracker.Meta.GetVersion(),
 	}
 }
 
-func fromDomainSlice(users []models.TimeTracker) TimeTrackersResponse {
+func fromDomainSlice(Trackers []models.TimeTracker) []TimeTrackerResponse {
 	var timeTrackerResponse []TimeTrackerResponse = make([]TimeTrackerResponse, 0)
 
-	for _, elem := range users {
+	for _, elem := range Trackers {
 		u := fromDomain(elem)
 
 		timeTrackerResponse = append(timeTrackerResponse, u)
 	}
 
-	return TimeTrackersResponse{
-		Trackers: timeTrackerResponse,
-	}
+	return timeTrackerResponse
 }

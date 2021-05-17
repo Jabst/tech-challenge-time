@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS time_tracker (
     id              SERIAL,
-    start           TIMESTAMP NOT NULL,
-    end             TIMESTAMP,
+    started         TIMESTAMP NOT NULL,
+    ended           TIMESTAMP,
     name            TEXT NOT NULL,
     deleted         BOOL DEFAULT 'f',
     version         INT DEFAULT 1,

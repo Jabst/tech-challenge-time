@@ -16,6 +16,7 @@ var (
 
 type TrackerStore interface {
 	Get(ctx context.Context, id uint64) (models.TimeTracker, error)
+	List(ctx context.Context, start, end time.Time) ([]models.TimeTracker, error)
 	Store(ctx context.Context, tracker models.TimeTracker, version uint32) (models.TimeTracker, error)
 	Delete(ctx context.Context, id uint64) error
 }
@@ -26,8 +27,12 @@ type TrackerService struct {
 
 type CreateTrackerParams struct {
 	Start time.Time
-	End   time.Time
 	Name  string
+}
+
+type ListTimeTracker struct {
+	Start time.Time
+	End   time.Time
 }
 
 type UpdateTrackerParams struct {
@@ -48,21 +53,31 @@ func NewTrackerService(store TrackerStore) TrackerService {
 	}
 }
 
-func (s TrackerService) GetTimeTracker(ctx context.Context, id uint64) (models.TimeTracker, error) {
-	user, err := s.store.Get(ctx, id)
+func (s TrackerService) GetTracker(ctx context.Context, id uint64) (models.TimeTracker, error) {
+	timeTracker, err := s.store.Get(ctx, id)
 	if err != nil {
-		return models.TimeTracker{}, fmt.Errorf("%w failed to get user", err)
+		return models.TimeTracker{}, fmt.Errorf("%w failed to get tracker", err)
 	}
 
-	if user.IsZero() {
+	if timeTracker.IsZero() {
 		return models.TimeTracker{}, ErrTrackerNotFound
 	}
 
-	return user, nil
+	return timeTracker, nil
 }
 
-func (s TrackerService) CreateUser(ctx context.Context, params CreateTrackerParams) (models.TimeTracker, error) {
-	timeTracker := models.NewTimeTracker(0, params.Start, params.End, params.Name)
+func (s TrackerService) ListTrackers(ctx context.Context, params ListTimeTracker) ([]models.TimeTracker, error) {
+
+	timeTrackers, err := s.store.List(ctx, params.Start, params.End)
+	if err != nil {
+		return nil, fmt.Errorf("%w failed to list trackers", err)
+	}
+
+	return timeTrackers, nil
+}
+
+func (s TrackerService) CreateTracker(ctx context.Context, params CreateTrackerParams) (models.TimeTracker, error) {
+	timeTracker := models.NewTimeTracker(0, params.Start, time.Time{}, params.Name)
 
 	timeTracker, err := s.store.Store(ctx, timeTracker, 0)
 	if err != nil {
@@ -72,8 +87,8 @@ func (s TrackerService) CreateUser(ctx context.Context, params CreateTrackerPara
 	return timeTracker, nil
 }
 
-func (s TrackerService) UpdateUser(ctx context.Context, params UpdateTrackerParams) (models.TimeTracker, error) {
-	timeTracker, err := s.GetTimeTracker(ctx, params.ID)
+func (s TrackerService) UpdateTracker(ctx context.Context, params UpdateTrackerParams) (models.TimeTracker, error) {
+	timeTracker, err := s.GetTracker(ctx, params.ID)
 	if err != nil {
 		return models.TimeTracker{}, err
 	}
@@ -82,15 +97,23 @@ func (s TrackerService) UpdateUser(ctx context.Context, params UpdateTrackerPara
 		return models.TimeTracker{}, ErrTrackerNotFound
 	}
 
+	if !params.End.IsZero() {
+		timeTracker.End = params.End
+	}
+
+	if params.Name != "" {
+		timeTracker.Name = params.Name
+	}
+
 	timeTracker, err = s.store.Store(ctx, timeTracker, params.Version)
 	if err != nil {
-		return models.TimeTracker{}, fmt.Errorf("%w failed to store user", err)
+		return models.TimeTracker{}, fmt.Errorf("%w failed to store tracker", err)
 	}
 
 	return timeTracker, nil
 }
 
-func (s TrackerService) DeleteUser(ctx context.Context, params DeleteTrackerParams) error {
+func (s TrackerService) DeleteTracker(ctx context.Context, params DeleteTrackerParams) error {
 	err := s.store.Delete(ctx, params.ID)
 	if err != nil {
 		return fmt.Errorf("%w failed to delete user", err)
