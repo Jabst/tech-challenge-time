@@ -75,6 +75,8 @@ go test -tags=integrationdb -v -p=1 ./backend/...
 
 docker-compose up -d
 
+The API is exposed at port 8080.
+
 ## Starting frontend app
 
 In frontend folder:
